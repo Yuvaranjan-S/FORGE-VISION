@@ -96,12 +96,19 @@ async def init_db():
             ("datasets", "kaggle_dataset_identifier", "TEXT"),
             ("datasets", "sha256_manifest", "TEXT"),
             ("datasets", "local_path", "TEXT"),
+            ("evidence", "dataset_id", "TEXT"),
+            ("evidence", "source_type", "TEXT DEFAULT 'USER_UPLOADED'"),
             ("evidence", "source_platform", "TEXT DEFAULT 'Direct'"),
             ("evidence", "source_reference", "TEXT"),
             ("evidence", "vendor_classification_status", "TEXT DEFAULT 'UNKNOWN'"),
             ("evidence", "original_filename", "TEXT"),
+            ("evidence", "original_camera_id", "TEXT"),
             ("evidence", "normalized_camera_id", "TEXT"),
             ("evidence", "import_date", "TEXT"),
+            ("evidence", "sha512", "TEXT"),
+            ("evidence", "sha3_256", "TEXT"),
+            ("evidence", "priority", "TEXT DEFAULT 'MEDIUM'"),
+            ("evidence", "completeness_score", "REAL DEFAULT 1.0"),
         ]
         for tbl, col, col_def in migrations:
             try:
