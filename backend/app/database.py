@@ -11,12 +11,19 @@ if raw_db_url.startswith("sqlite:///"):
 elif raw_db_url and not raw_db_url.startswith("postgres"):
     DB_PATH = os.path.abspath(raw_db_url)
 else:
-    DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "db", "forensiq.db"))
+    if os.getenv("VERCEL") == "1":
+        DB_PATH = "/tmp/forensiq.db"
+    else:
+        DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "db", "forensiq.db"))
 
 SCHEMA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "db", "schema.sql"))
 
 # Ensure database directory exists immediately
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+try:
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+except Exception:
+    DB_PATH = "/tmp/forensiq.db"
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 
 async def check_database_connection() -> bool:
