@@ -695,48 +695,54 @@ async def _seed_with_db(db: aiosqlite.Connection):
     # ── AI FINDINGS & REID HOPS ────────────────────────────
     print("[FORGE-VISION] Seeding AI findings & ReID hops...")
     for ev in DEMO_EVIDENCE:
-        async with db.execute("SELECT COUNT(*) as cnt FROM ai_findings WHERE evidence_id = ?", (ev["id"],)) as cur:
-            if (await cur.fetchone())["cnt"] == 0:
-                for obj in ["person", "car", "anomaly"]:
-                    await db.execute(
-                        """INSERT INTO ai_findings (id, evidence_id, case_id, finding_type, frame_number, timestamp_in_video, confidence, bounding_box, label, description, is_simulated, requires_review, generated_at, generator)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                        (
-                            str(uuid.uuid4()), ev["id"], ev["case_id"],
-                            obj if obj != "car" else "vehicle", 1500, "00:10:00",
-                            0.88, json.dumps([120, 80, 200, 300]),
-                            obj.capitalize(), f"AI Detection: {obj} identified in field of view.",
-                            0 if ev.get("source_type") == "PUBLIC_RESEARCH_DATASET" else 1,
-                            1, now, "YOLOv8-Surveillance"
+        try:
+            async with db.execute("SELECT COUNT(*) as cnt FROM ai_findings WHERE evidence_id = ?", (ev["id"],)) as cur:
+                if (await cur.fetchone())["cnt"] == 0:
+                    for obj in ["person", "car", "anomaly"]:
+                        await db.execute(
+                            """INSERT INTO ai_findings (id, evidence_id, case_id, finding_type, frame_number, timestamp_in_video, confidence, bounding_box, label, description, is_simulated, requires_review, generated_at, generator)
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                            (
+                                str(uuid.uuid4()), ev["id"], ev["case_id"],
+                                obj if obj != "car" else "vehicle", 1500, "00:10:00",
+                                0.88, json.dumps([120, 80, 200, 300]),
+                                obj.capitalize(), f"AI Detection: {obj} identified in field of view.",
+                                0 if ev.get("source_type") == "PUBLIC_RESEARCH_DATASET" else 1,
+                                1, now, "YOLOv8-Surveillance"
+                            )
                         )
-                    )
+        except Exception as e:
+            print(f"[SEED AI FINDINGS ERR]: {e}")
+    await db.commit()
 
     # ── CUSTODY LEDGER ─────────────────────────────────────
     print("[FORGE-VISION] Seeding chain of custody ledger...")
-    async with db.execute("SELECT COUNT(*) as cnt FROM custody_ledger WHERE case_id = 'CASE-DEMO001'") as cur:
-        if (await cur.fetchone())["cnt"] == 0:
-            prev_hash = "0" * 64
-            seq = 1
-            for ev in DEMO_EVIDENCE[:4]:
-                entry_id = str(uuid.uuid4())
-                ts = ev["ingested_at"]
-                detail_str = json.dumps({"action": "Forensic Ingestion", "source": ev.get("source_platform", "Direct"), "vendor": ev["source_vendor"], "sha256": ev["sha256"]})
-                this_hash = compute_custody_entry_hash(
-                    seq=seq, case_id=ev["case_id"], evidence_id=ev["id"],
-                    action="ingest" if ev.get("source_type") != "PUBLIC_RESEARCH_DATASET" else "dataset_imported",
-                    operator_id="user-investigator-01",
-                    operator_role="investigator", timestamp=ts,
-                    evidence_hash_before=None, evidence_hash_after=ev["sha256"],
-                    detail=detail_str, prev_entry_hash=prev_hash
-                )
-                await db.execute(
-                    """INSERT INTO custody_ledger (id, seq, case_id, evidence_id, action, operator_id, operator_role, timestamp, evidence_hash_before, evidence_hash_after, detail, prev_entry_hash, this_entry_hash)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (entry_id, seq, ev["case_id"], ev["id"], "ingest", "user-investigator-01", "investigator", ts, None, ev["sha256"], detail_str, prev_hash, this_hash)
-                )
-                prev_hash = this_hash
-                seq += 1
-
+    try:
+        async with db.execute("SELECT COUNT(*) as cnt FROM custody_ledger WHERE case_id = 'CASE-DEMO001'") as cur:
+            if (await cur.fetchone())["cnt"] == 0:
+                prev_hash = "0" * 64
+                seq = 1
+                for ev in DEMO_EVIDENCE[:4]:
+                    entry_id = str(uuid.uuid4())
+                    ts = ev["ingested_at"]
+                    detail_str = json.dumps({"action": "Forensic Ingestion", "source": ev.get("source_platform", "Direct"), "vendor": ev["source_vendor"], "sha256": ev["sha256"]})
+                    this_hash = compute_custody_entry_hash(
+                        seq=seq, case_id=ev["case_id"], evidence_id=ev["id"],
+                        action="ingest" if ev.get("source_type") != "PUBLIC_RESEARCH_DATASET" else "dataset_imported",
+                        operator_id="user-investigator-01",
+                        operator_role="investigator", timestamp=ts,
+                        evidence_hash_before=None, evidence_hash_after=ev["sha256"],
+                        detail=detail_str, prev_entry_hash=prev_hash
+                    )
+                    await db.execute(
+                        """INSERT INTO custody_ledger (id, seq, case_id, evidence_id, action, operator_id, operator_role, timestamp, evidence_hash_before, evidence_hash_after, detail, prev_entry_hash, this_entry_hash)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        (entry_id, seq, ev["case_id"], ev["id"], "ingest", "user-investigator-01", "investigator", ts, None, ev["sha256"], detail_str, prev_hash, this_hash)
+                    )
+                    prev_hash = this_hash
+                    seq += 1
+    except Exception as e:
+        print(f"[SEED CUSTODY ERR]: {e}")
     await db.commit()
     print("[FORGE-VISION] Database seeded successfully!")
 
