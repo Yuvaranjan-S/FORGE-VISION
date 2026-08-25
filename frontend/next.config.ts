@@ -10,12 +10,19 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!backendUrl) return [];
-    const cleanUrl = backendUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+    if (backendUrl) {
+      const cleanUrl = backendUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+      return [
+        {
+          source: "/api/:path*",
+          destination: `${cleanUrl}/api/:path*`,
+        },
+      ];
+    }
     return [
       {
         source: "/api/:path*",
-        destination: `${cleanUrl}/api/:path*`,
+        destination: "/api/index.py",
       },
     ];
   },
