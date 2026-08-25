@@ -561,7 +561,7 @@ async def seed(db_conn=None):
 
 async def _seed_with_db(db: aiosqlite.Connection):
     db.row_factory = aiosqlite.Row
-    await db.execute("PRAGMA foreign_keys=ON")
+    await db.execute("PRAGMA foreign_keys=OFF")
     now = datetime.now(timezone.utc).isoformat()
 
     # ── USERS ──────────────────────────────────────────────
