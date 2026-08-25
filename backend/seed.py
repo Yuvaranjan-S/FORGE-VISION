@@ -15,12 +15,9 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import aiosqlite
-from app.database import init_db, DB_PATH
+from app.database import init_db, DB_PATH, safe_hash_password
 from app.hash_engine import compute_string_sha256, compute_custody_entry_hash
 from app.kaggle_pipeline.kaggle_service import ensure_sample_kaggle_files, KAGGLE_SOURCES_CATALOG
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 DEMO_USERS = [
@@ -567,13 +564,16 @@ async def _seed_with_db(db: aiosqlite.Connection):
     # ── USERS ──────────────────────────────────────────────
     print("[FORGE-VISION] Seeding users...")
     for u in DEMO_USERS:
-            async with db.execute("SELECT id FROM users WHERE username = ?", (u["username"],)) as cur:
-                if not await cur.fetchone():
-                    hashed = pwd_context.hash(u["password"])
-                    await db.execute(
-                        "INSERT INTO users (id, username, full_name, role, hashed_password, is_active, created_at) VALUES (?,?,?,?,?,1,?)",
-                        (u["id"], u["username"], u["full_name"], u["role"], hashed, now)
-                    )
+            try:
+                async with db.execute("SELECT id FROM users WHERE username = ?", (u["username"],)) as cur:
+                    if not await cur.fetchone():
+                        hashed = safe_hash_password(u["password"])
+                        await db.execute(
+                            "INSERT INTO users (id, username, full_name, role, hashed_password, is_active, created_at) VALUES (?,?,?,?,?,1,?)",
+                            (u["id"], u["username"], u["full_name"], u["role"], hashed, now)
+                        )
+            except Exception as e:
+                print(f"[SEED USERS ERR]: {e}")
     await db.commit()
 
     # ── CASES ──────────────────────────────────────────────
