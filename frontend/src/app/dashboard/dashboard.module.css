@@ -1,0 +1,93 @@
+.root { display: flex; flex-direction: column; height: 100vh; background: var(--bg-void); }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; height: 52px; flex-shrink: 0;
+  background: var(--bg-deep); border-bottom: 1px solid var(--border-dim);
+}
+.topLeft { display: flex; align-items: center; gap: 12px; }
+.logoMark { font-size: 1.6rem; color: var(--amber-500); line-height: 1; }
+.sysName { font-size: 0.95rem; font-weight: 700; letter-spacing: 0.06em; color: var(--amber-400); }
+.sysTag { font-size: 0.64rem; color: #475569; letter-spacing: 0.04em; }
+.topRight { display: flex; align-items: center; gap: 12px; }
+.userBadge { display: flex; align-items: center; gap: 8px; }
+.userName { font-size: 0.82rem; color: #94a3b8; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--bg-panel); border-right: 1px solid var(--border-dim);
+  overflow-y: auto; display: flex; flex-direction: column; gap: 0;
+}
+.sideSection { border-bottom: 1px solid var(--border-dim); }
+.statRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; font-size: 0.76rem; color: #94a3b8;
+  border-bottom: 1px solid var(--border-dim);
+}
+.statRow:last-child { border-bottom: none; }
+.capRow { display: flex; align-items: center; gap: 8px; padding: 5px 14px; }
+.capLabel { font-size: 0.73rem; color: #64748b; }
+.capLegend { display: flex; gap: 12px; padding: 8px 14px; font-size: 0.68rem; border-top: 1px solid var(--border-dim); }
+
+/* MAIN */
+.main { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.mainHeader { display: flex; align-items: flex-start; justify-content: space-between; }
+.mainTitle { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.06em; color: #e2e8f0; }
+.mainSub { font-size: 0.76rem; color: #64748b; margin-top: 2px; }
+.errorBanner {
+  padding: 10px 14px; background: var(--red-glow);
+  border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius-md);
+  color: var(--red-400); font-size: 0.82rem;
+}
+
+/* MODAL */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.modalCard {
+  background: var(--bg-card); border: 1px solid var(--border-base);
+  border-radius: var(--radius-xl); width: 480px; overflow: hidden;
+  box-shadow: var(--shadow-panel);
+}
+.modalHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; background: var(--bg-deep);
+  border-bottom: 1px solid var(--border-dim);
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: var(--amber-400);
+}
+.modalForm { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+/* CASE GRID */
+.caseGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.caseCard {
+  background: var(--bg-card); border: 1px solid var(--border-dim);
+  border-radius: var(--radius-lg); padding: 16px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: var(--transition);
+}
+.caseCard:hover {
+  border-color: var(--amber-700);
+  box-shadow: var(--shadow-glow-amber);
+  transform: translateY(-2px);
+}
+.caseCardTop { display: flex; align-items: center; justify-content: space-between; }
+.caseTitle { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; line-height: 1.3; }
+.caseDesc { font-size: 0.76rem; color: #64748b; line-height: 1.4; }
+.caseMeta { display: flex; gap: 16px; padding: 10px 0; border-top: 1px solid var(--border-dim); }
+.caseMetaItem { display: flex; flex-direction: column; gap: 2px; font-size: 0.72rem; }
+.caseFooter { display: flex; align-items: center; justify-content: space-between; }
+.openBtn { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; color: var(--amber-400); }
+
+/* STATES */
+.loadingCenter { display: flex; align-items: center; justify-content: center; gap: 12px; height: 200px; color: #64748b; }
+.emptyState {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; height: 300px; color: #64748b; text-align: center;
+}
+.emptyIcon { font-size: 3rem; }
+.emptyTitle { font-size: 1rem; font-weight: 600; color: #94a3b8; }
+.emptySub { font-size: 0.82rem; }

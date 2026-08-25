@@ -1,0 +1,34 @@
+# ==============================================================================
+# FORGE-VISION — Render Cloud Deployment Blueprint
+# ==============================================================================
+# Deploy backend service to Render (Web Service)
+# Docs: https://render.com/docs/yaml-spec
+# ==============================================================================
+
+services:
+  - type: web
+    name: forge-vision-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FRONTEND_URL
+        sync: false
+        # Example: https://forge-vision.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+        # Example: https://forge-vision.vercel.app,http://localhost:3000
+      - key: DATABASE_URL
+        sync: false
+        # Defaults to sqlite:///./db/forensiq.db or external PostgreSQL URL
+      - key: KAGGLE_USERNAME
+        sync: false
+      - key: KAGGLE_KEY
+        sync: false

@@ -1,0 +1,129 @@
+.container {
+  min-height: calc(100vh - 52px);
+  background: var(--bg-void, #030712);
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.mapWorkspace {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  height: 580px;
+}
+
+.canvasWrap {
+  background: var(--bg-card, #0b1120);
+  border: 1px solid var(--border-base, #1e293b);
+  border-radius: var(--radius-lg, 8px);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+}
+
+.gridOverlay {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(30, 41, 59, 0.2) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(30, 41, 59, 0.2) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.node {
+  position: absolute;
+  width: 130px;
+  padding: 10px;
+  background: #050811;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.node:hover, .nodeActive {
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+  transform: scale(1.04);
+}
+
+.nodeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nodeCamId {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f59e0b;
+  font-family: monospace;
+}
+
+.nodeLoc {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar {
+  background: var(--bg-panel, #080d1a);
+  border: 1px solid var(--border-base, #1e293b);
+  border-radius: var(--radius-lg, 8px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.hopItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--bg-deep, #050811);
+  border-radius: 6px;
+  border: 1px solid #1e293b;
+  font-size: 0.74rem;
+}
