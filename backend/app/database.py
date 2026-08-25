@@ -68,30 +68,16 @@ DEMO_CASES = [
 
 
 async def seed_demo_users_and_data(db: aiosqlite.Connection):
-    """Guarantees demo accounts and cases exist in the database with valid password hashes."""
-    now = datetime.now(timezone.utc).isoformat()
-    for uid, uname, fname, role, pwd in DEMO_USERS:
-        hashed = safe_hash_password(pwd)
-        async with db.execute("SELECT id FROM users WHERE username = ?", (uname,)) as cur:
-            row = await cur.fetchone()
-            if not row:
-                await db.execute(
-                    "INSERT INTO users (id, username, full_name, role, hashed_password, is_active, created_at) VALUES (?,?,?,?,?,1,?)",
-                    (uid, uname, fname, role, hashed, now)
-                )
-            else:
-                await db.execute(
-                    "UPDATE users SET hashed_password = ?, is_active = 1 WHERE username = ?",
-                    (hashed, uname)
-                )
-    for cid, title, desc, status, cby, tz in DEMO_CASES:
-        async with db.execute("SELECT id FROM cases WHERE id = ?", (cid,)) as cur:
-            if not await cur.fetchone():
-                await db.execute(
-                    "INSERT INTO cases (id, title, description, status, created_at, updated_at, created_by, reference_timezone) VALUES (?,?,?,?,?,?,?,?)",
-                    (cid, title, desc, status, now, now, cby, tz)
-                )
-    await db.commit()
+    """Guarantees demo accounts, cases, evidence, datasets, custody ledger, and AI findings exist in the database."""
+    try:
+        import sys
+        backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        if backend_dir not in sys.path:
+            sys.path.insert(0, backend_dir)
+        from seed import seed
+        await seed()
+    except Exception as e:
+        print(f"[SEEDS] Exception during full seed: {e}")
 
 
 async def init_db():
