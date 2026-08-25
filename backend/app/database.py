@@ -77,7 +77,9 @@ async def seed_demo_users_and_data(db: aiosqlite.Connection):
         from seed import _seed_with_db
         await _seed_with_db(db)
     except Exception as e:
+        import traceback
         print(f"[SEEDS] Exception during full seed: {e}")
+        traceback.print_exc()
 
 
 async def init_db():

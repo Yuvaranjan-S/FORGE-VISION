@@ -145,7 +145,18 @@ async def register(user_in: UserCreate, db: aiosqlite.Connection = Depends(get_d
         (user_id, user_in.username, user_in.full_name, user_in.role, hashed, datetime.now(timezone.utc).isoformat())
     )
     await db.commit()
-    return {"id": user_id, "username": user_in.username, "role": user_in.role, "message": "User created"}
+    return {"id": user_id, "username": user_in.username, "full_name": user_in.full_name, "role": user_in.role}
+
+
+@router.post("/reseed")
+async def reseed(db: aiosqlite.Connection = Depends(get_db)):
+    try:
+        from seed import _seed_with_db
+        await _seed_with_db(db)
+        return {"status": "ok", "message": "Seeded successfully"}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
 
 
 @router.get("/me")
