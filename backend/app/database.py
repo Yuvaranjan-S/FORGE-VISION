@@ -67,5 +67,23 @@ async def init_db():
                 pass  # Column already exists
 
         await db.commit()
+
+        # Check if users table is empty; if so, trigger auto-seeding
+        async with db.execute("SELECT COUNT(*) FROM users") as cur:
+            res = await cur.fetchone()
+            count = res[0] if res else 0
+
+    if count == 0:
+        print("[FORGE-VISION] Empty database detected. Auto-seeding default demo users & cases...")
+        try:
+            import sys
+            backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            if backend_dir not in sys.path:
+                sys.path.insert(0, backend_dir)
+            from seed import seed as run_seed
+            await run_seed()
+        except Exception as e:
+            print(f"[FORGE-VISION] Auto-seed error/warning: {e}")
+
     print(f"[FORGE-VISION] Database initialized at {DB_PATH}")
 
