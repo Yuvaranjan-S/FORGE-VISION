@@ -8,7 +8,16 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
     ],
   },
-  // Allow unoptimized images from backend API
+  async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://forge-vision-backend.onrender.com";
+    const cleanUrl = backendUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${cleanUrl}/api/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
