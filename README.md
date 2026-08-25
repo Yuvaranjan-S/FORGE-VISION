@@ -113,10 +113,10 @@ git init -b main
 git add .
 git commit -m "Initial production-ready FORGE-VISION deployment"
 ```
-2. Create a new GitHub repository (e.g. `https://github.com/<your-username>/FORGE-VISION`).
+2. Create a new GitHub repository or connect to: `https://github.com/Yuvaranjan-S/FORGE-VISION`.
 3. Push to GitHub:
 ```powershell
-git remote add origin https://github.com/<your-username>/FORGE-VISION.git
+git remote set-url origin https://github.com/Yuvaranjan-S/FORGE-VISION.git
 git push -u origin main
 ```
 
