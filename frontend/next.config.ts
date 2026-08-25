@@ -9,8 +9,7 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!backendUrl) return [];
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://forge-vision.onrender.com";
     const cleanUrl = backendUrl.replace(/\/+$/, "").replace(/\/api$/, "");
     return [
       {
