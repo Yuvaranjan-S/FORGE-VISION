@@ -541,23 +541,32 @@ DEMO_BOOKMARKS = [
 ]
 
 
-async def seed():
+async def seed(db_conn=None):
     print("[FORGE-VISION] Initializing database schema...")
     await init_db()
 
     # Pre-generate sample files for Kaggle benchmarks
     print("[FORGE-VISION] Ensuring local Kaggle CCTV sample benchmarks...")
     for key in ["ucf-crime", "virat-cctv", "racd-cctv", "cctv-action", "traffic-intersection"]:
-        ensure_sample_kaggle_files(key)
+        try:
+            ensure_sample_kaggle_files(key)
+        except Exception:
+            pass
 
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        await db.execute("PRAGMA foreign_keys=ON")
-        now = datetime.now(timezone.utc).isoformat()
+    if db_conn is not None:
+        await _seed_with_db(db_conn)
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await _seed_with_db(db)
 
-        # ── USERS ──────────────────────────────────────────────
-        print("[FORGE-VISION] Seeding users...")
-        for u in DEMO_USERS:
+async def _seed_with_db(db: aiosqlite.Connection):
+    db.row_factory = aiosqlite.Row
+    await db.execute("PRAGMA foreign_keys=ON")
+    now = datetime.now(timezone.utc).isoformat()
+
+    # ── USERS ──────────────────────────────────────────────
+    print("[FORGE-VISION] Seeding users...")
+    for u in DEMO_USERS:
             async with db.execute("SELECT id FROM users WHERE username = ?", (u["username"],)) as cur:
                 if not await cur.fetchone():
                     hashed = pwd_context.hash(u["password"])
@@ -565,170 +574,170 @@ async def seed():
                         "INSERT INTO users (id, username, full_name, role, hashed_password, is_active, created_at) VALUES (?,?,?,?,?,1,?)",
                         (u["id"], u["username"], u["full_name"], u["role"], hashed, now)
                     )
-        await db.commit()
+    await db.commit()
 
-        # ── CASES ──────────────────────────────────────────────
-        print("[FORGE-VISION] Seeding cases...")
-        for case in DEMO_CASES:
-            async with db.execute("SELECT id FROM cases WHERE id = ?", (case["id"],)) as cur:
-                if not await cur.fetchone():
-                    await db.execute(
-                        """INSERT INTO cases (id, title, description, status, created_at, updated_at, created_by, reference_timezone)
-                           VALUES (?,?,?,?,?,?,?,?)""",
-                        (case["id"], case["title"], case["description"], case["status"],
-                         now, now, "user-supervisor-01", case["reference_timezone"])
-                    )
-        await db.commit()
-
-        # ── DATASETS ───────────────────────────────────────────
-        print("[FORGE-VISION] Seeding datasets...")
-        for ds in DEMO_DATASETS:
-            async with db.execute("SELECT id FROM datasets WHERE id = ?", (ds["id"],)) as cur:
-                if not await cur.fetchone():
-                    await db.execute(
-                        """INSERT INTO datasets (
-                            id, case_id, name, source_type, source_provider, description,
-                            vendor, device_model, camera_count, file_count, total_size_bytes,
-                            license, source_reference, collection_method, collector_name,
-                            collection_date, is_synthetic, forensic_status, platform,
-                            kaggle_dataset_identifier, sha256, created_at
-                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                        (
-                            ds["id"], ds["case_id"], ds["name"], ds["source_type"], ds["source_provider"],
-                            ds["description"], ds["vendor"], ds["device_model"], ds["camera_count"],
-                            ds["file_count"], ds["total_size_bytes"], ds["license"], ds["source_reference"],
-                            ds["collection_method"], ds["collector_name"], ds["collection_date"],
-                            ds["is_synthetic"], ds["forensic_status"], ds.get("platform", "Local"),
-                            ds.get("kaggle_dataset_identifier"), ds["sha256"], now
-                        )
-                    )
-        await db.commit()
-
-        # ── EVIDENCE ───────────────────────────────────────────
-        print("[FORGE-VISION] Seeding evidence...")
-        for ev in DEMO_EVIDENCE:
-            async with db.execute("SELECT id FROM evidence WHERE id = ?", (ev["id"],)) as cur:
-                if not await cur.fetchone():
-                    await db.execute(
-                        """INSERT INTO evidence (
-                            id, case_id, dataset_id, source_type, source_platform, source_vendor, vendor_classification_status,
-                            parser_used, parser_confidence, is_simulated_adapter, device_model, firmware,
-                            camera_id, original_camera_id, normalized_camera_id, channel, original_filename,
-                            timestamp_start, timestamp_end, original_timestamp, normalized_timestamp, timezone, clock_drift_seconds,
-                            codec, resolution, fps, duration_seconds, bitrate_kbps, frame_count,
-                            file_path, file_size_bytes, recovery_status, integrity_status,
-                            authenticity_status, priority, completeness_score,
-                            md5, sha256, sha512, sha3_256, ingested_at, ingested_by, import_date, notes
-                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                        (
-                            ev["id"], ev["case_id"], ev.get("dataset_id"), ev.get("source_type", "SYNTHETIC_DEMO"),
-                            ev.get("source_platform", "Direct"), ev["source_vendor"], ev.get("vendor_classification_status", "UNKNOWN"),
-                            ev["parser_used"], ev["parser_confidence"], ev["is_simulated_adapter"],
-                            ev["device_model"], ev.get("firmware"), ev["camera_id"], ev.get("original_camera_id", ev["camera_id"]),
-                            ev.get("normalized_camera_id", ev["camera_id"]), ev["channel"], ev.get("original_filename", ev["camera_id"] + ".mp4"),
-                            ev.get("timestamp_start"), ev.get("timestamp_end", now), ev.get("original_timestamp", "RELATIVE_TO_START"),
-                            ev.get("normalized_timestamp", "RELATIVE TO VIDEO START"), ev.get("timezone", "Asia/Kolkata"), ev.get("clock_drift_seconds", 0),
-                            ev["codec"], ev["resolution"], ev["fps"], ev["duration_seconds"],
-                            ev["bitrate_kbps"], ev["frame_count"],
-                            ev["file_path"], ev["file_size_bytes"],
-                            ev["recovery_status"], ev["integrity_status"],
-                            ev["authenticity_status"], ev.get("priority", "MEDIUM"), ev["completeness_score"],
-                            ev["md5"], ev["sha256"], ev.get("sha512"), ev["sha3_256"],
-                            ev["ingested_at"], ev["ingested_by"], ev.get("import_date", now[:10]), ev.get("notes"),
-                        )
-                    )
-
-            # Recovery Segments
-            if ev["recovery_status"] == "partial":
-                await db.execute("DELETE FROM recovery_segments WHERE evidence_id = ?", (ev["id"],))
+    # ── CASES ──────────────────────────────────────────────
+    print("[FORGE-VISION] Seeding cases...")
+    for case in DEMO_CASES:
+        async with db.execute("SELECT id FROM cases WHERE id = ?", (case["id"],)) as cur:
+            if not await cur.fetchone():
                 await db.execute(
-                    """INSERT INTO recovery_segments (id, evidence_id, segment_type, start_frame, end_frame, start_time, end_time, completeness, nal_units_found, is_simulated, notes)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                    (str(uuid.uuid4()), ev["id"], "intact", 0, 50000, 0.0, 2500.0, 1.0, 18400, 1, "[SYNTHETIC] Initial recording block intact")
+                    """INSERT INTO cases (id, title, description, status, created_at, updated_at, created_by, reference_timezone)
+                       VALUES (?,?,?,?,?,?,?,?)""",
+                    (case["id"], case["title"], case["description"], case["status"],
+                     now, now, "user-supervisor-01", case["reference_timezone"])
                 )
+    await db.commit()
+
+    # ── DATASETS ───────────────────────────────────────────
+    print("[FORGE-VISION] Seeding datasets...")
+    for ds in DEMO_DATASETS:
+        async with db.execute("SELECT id FROM datasets WHERE id = ?", (ds["id"],)) as cur:
+            if not await cur.fetchone():
                 await db.execute(
-                    """INSERT INTO recovery_segments (id, evidence_id, segment_type, start_frame, end_frame, start_time, end_time, completeness, nal_units_found, is_simulated, notes)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                    (str(uuid.uuid4()), ev["id"], "gap", 50000, 70000, 2500.0, 3500.0, 0.0, 0, 1, "[SYNTHETIC] Unrecorded gap: 1000s missing")
+                    """INSERT INTO datasets (
+                        id, case_id, name, source_type, source_provider, description,
+                        vendor, device_model, camera_count, file_count, total_size_bytes,
+                        license, source_reference, collection_method, collector_name,
+                        collection_date, is_synthetic, forensic_status, platform,
+                        kaggle_dataset_identifier, sha256, created_at
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        ds["id"], ds["case_id"], ds["name"], ds["source_type"], ds["source_provider"],
+                        ds["description"], ds["vendor"], ds["device_model"], ds["camera_count"],
+                        ds["file_count"], ds["total_size_bytes"], ds["license"], ds["source_reference"],
+                        ds["collection_method"], ds["collector_name"], ds["collection_date"],
+                        ds["is_synthetic"], ds["forensic_status"], ds.get("platform", "Local"),
+                        ds.get("kaggle_dataset_identifier"), ds["sha256"], now
+                    )
                 )
+    await db.commit()
+
+    # ── EVIDENCE ───────────────────────────────────────────
+    print("[FORGE-VISION] Seeding evidence...")
+    for ev in DEMO_EVIDENCE:
+        async with db.execute("SELECT id FROM evidence WHERE id = ?", (ev["id"],)) as cur:
+            if not await cur.fetchone():
                 await db.execute(
-                    """INSERT INTO recovery_segments (id, evidence_id, segment_type, start_frame, end_frame, start_time, end_time, completeness, nal_units_found, is_simulated, notes)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                    (str(uuid.uuid4()), ev["id"], "recovered", 70000, 144000, 3500.0, 7200.0, 0.85, 14200, 1, "[SYNTHETIC] Recovered stream fragments from unallocated sectors")
+                    """INSERT INTO evidence (
+                        id, case_id, dataset_id, source_type, source_platform, source_vendor, vendor_classification_status,
+                        parser_used, parser_confidence, is_simulated_adapter, device_model, firmware,
+                        camera_id, original_camera_id, normalized_camera_id, channel, original_filename,
+                        timestamp_start, timestamp_end, original_timestamp, normalized_timestamp, timezone, clock_drift_seconds,
+                        codec, resolution, fps, duration_seconds, bitrate_kbps, frame_count,
+                        file_path, file_size_bytes, recovery_status, integrity_status,
+                        authenticity_status, priority, completeness_score,
+                        md5, sha256, sha512, sha3_256, ingested_at, ingested_by, import_date, notes
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        ev["id"], ev["case_id"], ev.get("dataset_id"), ev.get("source_type", "SYNTHETIC_DEMO"),
+                        ev.get("source_platform", "Direct"), ev["source_vendor"], ev.get("vendor_classification_status", "UNKNOWN"),
+                        ev["parser_used"], ev["parser_confidence"], ev["is_simulated_adapter"],
+                        ev["device_model"], ev.get("firmware"), ev["camera_id"], ev.get("original_camera_id", ev["camera_id"]),
+                        ev.get("normalized_camera_id", ev["camera_id"]), ev["channel"], ev.get("original_filename", ev["camera_id"] + ".mp4"),
+                        ev.get("timestamp_start"), ev.get("timestamp_end", now), ev.get("original_timestamp", "RELATIVE_TO_START"),
+                        ev.get("normalized_timestamp", "RELATIVE TO VIDEO START"), ev.get("timezone", "Asia/Kolkata"), ev.get("clock_drift_seconds", 0),
+                        ev["codec"], ev["resolution"], ev["fps"], ev["duration_seconds"],
+                        ev["bitrate_kbps"], ev["frame_count"],
+                        ev["file_path"], ev["file_size_bytes"],
+                        ev["recovery_status"], ev["integrity_status"],
+                        ev["authenticity_status"], ev.get("priority", "MEDIUM"), ev["completeness_score"],
+                        ev["md5"], ev["sha256"], ev.get("sha512"), ev["sha3_256"],
+                        ev["ingested_at"], ev["ingested_by"], ev.get("import_date", now[:10]), ev.get("notes"),
+                    )
                 )
 
-        await db.commit()
+        # Recovery Segments
+        if ev["recovery_status"] == "partial":
+            await db.execute("DELETE FROM recovery_segments WHERE evidence_id = ?", (ev["id"],))
+            await db.execute(
+                """INSERT INTO recovery_segments (id, evidence_id, segment_type, start_frame, end_frame, start_time, end_time, completeness, nal_units_found, is_simulated, notes)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (str(uuid.uuid4()), ev["id"], "intact", 0, 50000, 0.0, 2500.0, 1.0, 18400, 1, "[SYNTHETIC] Initial recording block intact")
+            )
+            await db.execute(
+                """INSERT INTO recovery_segments (id, evidence_id, segment_type, start_frame, end_frame, start_time, end_time, completeness, nal_units_found, is_simulated, notes)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (str(uuid.uuid4()), ev["id"], "gap", 50000, 70000, 2500.0, 3500.0, 0.0, 0, 1, "[SYNTHETIC] Unrecorded gap: 1000s missing")
+            )
+            await db.execute(
+                """INSERT INTO recovery_segments (id, evidence_id, segment_type, start_frame, end_frame, start_time, end_time, completeness, nal_units_found, is_simulated, notes)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (str(uuid.uuid4()), ev["id"], "recovered", 70000, 144000, 3500.0, 7200.0, 0.85, 14200, 1, "[SYNTHETIC] Recovered stream fragments from unallocated sectors")
+            )
 
-        # ── CAMERA TOPOLOGY ────────────────────────────────────
-        print("[FORGE-VISION] Seeding camera topology...")
-        for (cam_id, cam_name, loc, x, y, conn) in DEMO_TOPOLOGY:
-            async with db.execute("SELECT id FROM camera_topology WHERE case_id = 'CASE-DEMO001' AND camera_id = ?", (cam_id,)) as cur:
-                if not await cur.fetchone():
-                    await db.execute(
-                        """INSERT INTO camera_topology (id, case_id, camera_id, camera_name, location_label, x_pos, y_pos, connected_camera_ids, notes, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                        (str(uuid.uuid4()), "CASE-DEMO001", cam_id, cam_name, loc, x, y, json.dumps(conn), f"Spatial node for {loc}", now)
-                    )
-        await db.commit()
+    await db.commit()
 
-        # ── BOOKMARKS ──────────────────────────────────────────
-        print("[FORGE-VISION] Seeding bookmarks...")
-        for bm in DEMO_BOOKMARKS:
-            async with db.execute("SELECT id FROM bookmarks WHERE id = ?", (bm["id"],)) as cur:
-                if not await cur.fetchone():
-                    await db.execute(
-                        """INSERT INTO bookmarks (id, case_id, evidence_id, camera_id, frame_number, timestamp_in_video, title, notes, tag, created_by, created_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                        (bm["id"], bm["case_id"], bm["evidence_id"], bm["camera_id"], bm["frame_number"], bm["timestamp_in_video"], bm["title"], bm["notes"], bm["tag"], "Arjun Sharma (Investigator)", now)
-                    )
-        await db.commit()
+    # ── CAMERA TOPOLOGY ────────────────────────────────────
+    print("[FORGE-VISION] Seeding camera topology...")
+    for (cam_id, cam_name, loc, x, y, conn) in DEMO_TOPOLOGY:
+        async with db.execute("SELECT id FROM camera_topology WHERE case_id = 'CASE-DEMO001' AND camera_id = ?", (cam_id,)) as cur:
+            if not await cur.fetchone():
+                await db.execute(
+                    """INSERT INTO camera_topology (id, case_id, camera_id, camera_name, location_label, x_pos, y_pos, connected_camera_ids, notes, created_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    (str(uuid.uuid4()), "CASE-DEMO001", cam_id, cam_name, loc, x, y, json.dumps(conn), f"Spatial node for {loc}", now)
+                )
+    await db.commit()
 
-        # ── AI FINDINGS & REID HOPS ────────────────────────────
-        print("[FORGE-VISION] Seeding AI findings & ReID hops...")
-        for ev in DEMO_EVIDENCE:
-            async with db.execute("SELECT COUNT(*) as cnt FROM ai_findings WHERE evidence_id = ?", (ev["id"],)) as cur:
-                if (await cur.fetchone())["cnt"] == 0:
-                    for obj in ["person", "car", "anomaly"]:
-                        await db.execute(
-                            """INSERT INTO ai_findings (id, evidence_id, case_id, finding_type, frame_number, timestamp_in_video, confidence, bounding_box, label, description, is_simulated, requires_review, generated_at, generator)
-                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                            (
-                                str(uuid.uuid4()), ev["id"], ev["case_id"],
-                                obj if obj != "car" else "vehicle", 1500, "00:10:00",
-                                0.88, json.dumps([120, 80, 200, 300]),
-                                obj.capitalize(), f"AI Detection: {obj} identified in field of view.",
-                                0 if ev["source_type"] == "PUBLIC_RESEARCH_DATASET" else 1,
-                                1, now, "YOLOv8-Surveillance"
-                            )
-                        )
+    # ── BOOKMARKS ──────────────────────────────────────────
+    print("[FORGE-VISION] Seeding bookmarks...")
+    for bm in DEMO_BOOKMARKS:
+        async with db.execute("SELECT id FROM bookmarks WHERE id = ?", (bm["id"],)) as cur:
+            if not await cur.fetchone():
+                await db.execute(
+                    """INSERT INTO bookmarks (id, case_id, evidence_id, camera_id, frame_number, timestamp_in_video, title, notes, tag, created_by, created_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                    (bm["id"], bm["case_id"], bm["evidence_id"], bm["camera_id"], bm["frame_number"], bm["timestamp_in_video"], bm["title"], bm["notes"], bm["tag"], "Arjun Sharma (Investigator)", now)
+                )
+    await db.commit()
 
-        # ── CUSTODY LEDGER ─────────────────────────────────────
-        print("[FORGE-VISION] Seeding chain of custody ledger...")
-        async with db.execute("SELECT COUNT(*) as cnt FROM custody_ledger WHERE case_id = 'CASE-DEMO001'") as cur:
+    # ── AI FINDINGS & REID HOPS ────────────────────────────
+    print("[FORGE-VISION] Seeding AI findings & ReID hops...")
+    for ev in DEMO_EVIDENCE:
+        async with db.execute("SELECT COUNT(*) as cnt FROM ai_findings WHERE evidence_id = ?", (ev["id"],)) as cur:
             if (await cur.fetchone())["cnt"] == 0:
-                prev_hash = "0" * 64
-                seq = 1
-                for ev in DEMO_EVIDENCE[:4]:
-                    entry_id = str(uuid.uuid4())
-                    ts = ev["ingested_at"]
-                    detail_str = json.dumps({"action": "Forensic Ingestion", "source": ev.get("source_platform", "Direct"), "vendor": ev["source_vendor"], "sha256": ev["sha256"]})
-                    this_hash = compute_custody_entry_hash(
-                        seq=seq, case_id=ev["case_id"], evidence_id=ev["id"],
-                        action="ingest" if ev["source_type"] != "PUBLIC_RESEARCH_DATASET" else "dataset_imported",
-                        operator_id="user-investigator-01",
-                        operator_role="investigator", timestamp=ts,
-                        evidence_hash_before=None, evidence_hash_after=ev["sha256"],
-                        detail=detail_str, prev_entry_hash=prev_hash
-                    )
+                for obj in ["person", "car", "anomaly"]:
                     await db.execute(
-                        """INSERT INTO custody_ledger (id, seq, case_id, evidence_id, action, operator_id, operator_role, timestamp, evidence_hash_before, evidence_hash_after, detail, prev_entry_hash, this_entry_hash)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                        (entry_id, seq, ev["case_id"], ev["id"], "ingest", "user-investigator-01", "investigator", ts, None, ev["sha256"], detail_str, prev_hash, this_hash)
+                        """INSERT INTO ai_findings (id, evidence_id, case_id, finding_type, frame_number, timestamp_in_video, confidence, bounding_box, label, description, is_simulated, requires_review, generated_at, generator)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            str(uuid.uuid4()), ev["id"], ev["case_id"],
+                            obj if obj != "car" else "vehicle", 1500, "00:10:00",
+                            0.88, json.dumps([120, 80, 200, 300]),
+                            obj.capitalize(), f"AI Detection: {obj} identified in field of view.",
+                            0 if ev["source_type"] == "PUBLIC_RESEARCH_DATASET" else 1,
+                            1, now, "YOLOv8-Surveillance"
+                        )
                     )
-                    prev_hash = this_hash
-                    seq += 1
 
-        await db.commit()
+    # ── CUSTODY LEDGER ─────────────────────────────────────
+    print("[FORGE-VISION] Seeding chain of custody ledger...")
+    async with db.execute("SELECT COUNT(*) as cnt FROM custody_ledger WHERE case_id = 'CASE-DEMO001'") as cur:
+        if (await cur.fetchone())["cnt"] == 0:
+            prev_hash = "0" * 64
+            seq = 1
+            for ev in DEMO_EVIDENCE[:4]:
+                entry_id = str(uuid.uuid4())
+                ts = ev["ingested_at"]
+                detail_str = json.dumps({"action": "Forensic Ingestion", "source": ev.get("source_platform", "Direct"), "vendor": ev["source_vendor"], "sha256": ev["sha256"]})
+                this_hash = compute_custody_entry_hash(
+                    seq=seq, case_id=ev["case_id"], evidence_id=ev["id"],
+                    action="ingest" if ev["source_type"] != "PUBLIC_RESEARCH_DATASET" else "dataset_imported",
+                    operator_id="user-investigator-01",
+                    operator_role="investigator", timestamp=ts,
+                    evidence_hash_before=None, evidence_hash_after=ev["sha256"],
+                    detail=detail_str, prev_entry_hash=prev_hash
+                )
+                await db.execute(
+                    """INSERT INTO custody_ledger (id, seq, case_id, evidence_id, action, operator_id, operator_role, timestamp, evidence_hash_before, evidence_hash_after, detail, prev_entry_hash, this_entry_hash)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (entry_id, seq, ev["case_id"], ev["id"], "ingest", "user-investigator-01", "investigator", ts, None, ev["sha256"], detail_str, prev_hash, this_hash)
+                )
+                prev_hash = this_hash
+                seq += 1
+
+    await db.commit()
     print("[FORGE-VISION] Database seeded successfully!")
 
 

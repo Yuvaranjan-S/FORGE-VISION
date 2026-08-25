@@ -74,8 +74,8 @@ async def seed_demo_users_and_data(db: aiosqlite.Connection):
         backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         if backend_dir not in sys.path:
             sys.path.insert(0, backend_dir)
-        from seed import seed
-        await seed()
+        from seed import _seed_with_db
+        await _seed_with_db(db)
     except Exception as e:
         print(f"[SEEDS] Exception during full seed: {e}")
 
