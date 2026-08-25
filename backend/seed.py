@@ -706,7 +706,7 @@ async def _seed_with_db(db: aiosqlite.Connection):
                             obj if obj != "car" else "vehicle", 1500, "00:10:00",
                             0.88, json.dumps([120, 80, 200, 300]),
                             obj.capitalize(), f"AI Detection: {obj} identified in field of view.",
-                            0 if ev["source_type"] == "PUBLIC_RESEARCH_DATASET" else 1,
+                            0 if ev.get("source_type") == "PUBLIC_RESEARCH_DATASET" else 1,
                             1, now, "YOLOv8-Surveillance"
                         )
                     )
@@ -723,7 +723,7 @@ async def _seed_with_db(db: aiosqlite.Connection):
                 detail_str = json.dumps({"action": "Forensic Ingestion", "source": ev.get("source_platform", "Direct"), "vendor": ev["source_vendor"], "sha256": ev["sha256"]})
                 this_hash = compute_custody_entry_hash(
                     seq=seq, case_id=ev["case_id"], evidence_id=ev["id"],
-                    action="ingest" if ev["source_type"] != "PUBLIC_RESEARCH_DATASET" else "dataset_imported",
+                    action="ingest" if ev.get("source_type") != "PUBLIC_RESEARCH_DATASET" else "dataset_imported",
                     operator_id="user-investigator-01",
                     operator_role="investigator", timestamp=ts,
                     evidence_hash_before=None, evidence_hash_after=ev["sha256"],
