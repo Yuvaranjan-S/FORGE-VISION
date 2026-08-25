@@ -39,6 +39,45 @@ async def get_db():
         yield db
 
 
+from datetime import datetime, timezone
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+DEMO_USERS = [
+    ("user-investigator-01", "investigator", "Arjun Sharma", "investigator", "forensiq2024"),
+    ("user-supervisor-01", "supervisor", "Dr. Priya Mehta", "supervisor", "supervisor2024"),
+    ("user-auditor-01", "auditor", "Rahul Verma", "auditor", "auditor2024"),
+]
+
+DEMO_CASES = [
+    ("CASE-DEMO001", "Operation Kite — Bank Robbery Investigation", "Multi-vendor DVR footage and public research benchmarks.", "active", "user-supervisor-01", "Asia/Kolkata"),
+    ("CASE-DEMO002", "Commercial Complex Fire — Evidence Recovery", "Partial NVR data recovery after thermal damage.", "active", "user-supervisor-01", "Asia/Kolkata"),
+    ("CASE-DEMO-MULTIVENDOR", "Multi-Vendor DVR/NVR Architecture Evaluation", "Controlled SIH multi-vendor demonstration case.", "active", "user-supervisor-01", "Asia/Kolkata"),
+]
+
+
+async def seed_demo_users_and_data(db: aiosqlite.Connection):
+    """Guarantees demo accounts and cases exist in the database."""
+    now = datetime.now(timezone.utc).isoformat()
+    for uid, uname, fname, role, pwd in DEMO_USERS:
+        async with db.execute("SELECT id FROM users WHERE username = ?", (uname,)) as cur:
+            if not await cur.fetchone():
+                hashed = pwd_context.hash(pwd)
+                await db.execute(
+                    "INSERT INTO users (id, username, full_name, role, hashed_password, is_active, created_at) VALUES (?,?,?,?,?,1,?)",
+                    (uid, uname, fname, role, hashed, now)
+                )
+    for cid, title, desc, status, cby, tz in DEMO_CASES:
+        async with db.execute("SELECT id FROM cases WHERE id = ?", (cid,)) as cur:
+            if not await cur.fetchone():
+                await db.execute(
+                    "INSERT INTO cases (id, title, description, status, created_at, updated_at, created_by, reference_timezone) VALUES (?,?,?,?,?,?,?,?)",
+                    (cid, title, desc, status, now, now, cby, tz)
+                )
+    await db.commit()
+
+
 async def init_db():
     """Initialize database with schema on startup and ensure column migrations."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -67,23 +106,7 @@ async def init_db():
                 pass  # Column already exists
 
         await db.commit()
+        await seed_demo_users_and_data(db)
 
-        # Check if users table is empty; if so, trigger auto-seeding
-        async with db.execute("SELECT COUNT(*) FROM users") as cur:
-            res = await cur.fetchone()
-            count = res[0] if res else 0
-
-    if count == 0:
-        print("[FORGE-VISION] Empty database detected. Auto-seeding default demo users & cases...")
-        try:
-            import sys
-            backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-            if backend_dir not in sys.path:
-                sys.path.insert(0, backend_dir)
-            from seed import seed as run_seed
-            await run_seed()
-        except Exception as e:
-            print(f"[FORGE-VISION] Auto-seed error/warning: {e}")
-
-    print(f"[FORGE-VISION] Database initialized at {DB_PATH}")
+    print(f"[FORGE-VISION] Database initialized with demo accounts at {DB_PATH}")
 

@@ -10,7 +10,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 
 import aiosqlite
-from ..database import get_db
+from ..database import get_db, seed_demo_users_and_data
 
 SECRET_KEY = "FORGE-VISION-SIH150-SECRET-CHANGE-IN-PRODUCTION"
 ALGORITHM = "HS256"
@@ -81,6 +81,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: aiosqlite.Connection = Depends(get_db)
 ):
+    await seed_demo_users_and_data(db)
     async with db.execute(
         "SELECT * FROM users WHERE username = ? AND is_active = 1", (form_data.username,)
     ) as cur:
