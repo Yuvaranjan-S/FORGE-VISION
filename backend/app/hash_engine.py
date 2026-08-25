@@ -41,13 +41,18 @@ def compute_string_sha256(data: str) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
-def compute_custody_entry_hash(entry: dict, exclude_key: str = "this_entry_hash") -> str:
+def compute_custody_entry_hash(entry: Optional[dict] = None, exclude_key: str = "this_entry_hash", **kwargs) -> str:
     """
     Compute the canonical hash of a custody ledger entry.
-    Excludes `this_entry_hash` itself (obviously) to avoid circular dependency.
-    Sorts keys for determinism.
+    Excludes `this_entry_hash` itself to avoid circular dependency.
+    Sorts keys for determinism. Supports both dict and keyword arguments.
     """
-    payload = {k: v for k, v in entry.items() if k != exclude_key}
+    if entry is None:
+        payload = {k: v for k, v in kwargs.items() if k != exclude_key}
+    elif isinstance(entry, dict):
+        payload = {k: v for k, v in entry.items() if k != exclude_key}
+    else:
+        payload = {}
     canonical = json.dumps(payload, sort_keys=True, ensure_ascii=True)
     return compute_string_sha256(canonical)
 
