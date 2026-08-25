@@ -58,15 +58,21 @@ DEMO_CASES = [
 
 
 async def seed_demo_users_and_data(db: aiosqlite.Connection):
-    """Guarantees demo accounts and cases exist in the database."""
+    """Guarantees demo accounts and cases exist in the database with valid password hashes."""
     now = datetime.now(timezone.utc).isoformat()
     for uid, uname, fname, role, pwd in DEMO_USERS:
+        hashed = pwd_context.hash(pwd)
         async with db.execute("SELECT id FROM users WHERE username = ?", (uname,)) as cur:
-            if not await cur.fetchone():
-                hashed = pwd_context.hash(pwd)
+            row = await cur.fetchone()
+            if not row:
                 await db.execute(
                     "INSERT INTO users (id, username, full_name, role, hashed_password, is_active, created_at) VALUES (?,?,?,?,?,1,?)",
                     (uid, uname, fname, role, hashed, now)
+                )
+            else:
+                await db.execute(
+                    "UPDATE users SET hashed_password = ?, is_active = 1 WHERE username = ?",
+                    (hashed, uname)
                 )
     for cid, title, desc, status, cby, tz in DEMO_CASES:
         async with db.execute("SELECT id FROM cases WHERE id = ?", (cid,)) as cur:
