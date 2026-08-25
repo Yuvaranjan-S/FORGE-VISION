@@ -15,6 +15,9 @@ else:
 
 SCHEMA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "db", "schema.sql"))
 
+# Ensure database directory exists immediately
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
 
 async def check_database_connection() -> bool:
     """Check whether the database is accessible and responsive."""

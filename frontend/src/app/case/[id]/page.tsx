@@ -964,10 +964,9 @@ function VideoPlayer({ evidenceId, cameraId, isSimulated, token }: {
 }) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
   const tokenQ = token ? `?token=${encodeURIComponent(token)}` : "";
-  const videoSrc = `${API}/evidence/${evidenceId}/video${tokenQ}`;
-  const thumbSrc = `${API}/evidence/${evidenceId}/thumbnail${tokenQ}`;
+  const videoSrc = `${API_BASE}/evidence/${evidenceId}/video${tokenQ}`;
+  const thumbSrc = `${API_BASE}/evidence/${evidenceId}/thumbnail${tokenQ}`;
 
   const showPlaceholder = videoFailed && thumbFailed;
 

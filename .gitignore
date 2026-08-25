@@ -29,6 +29,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/src/lib/
 lib64/
 parts/
 sdist/
@@ -76,7 +77,11 @@ uploads/
 *.mpg
 *.mpeg
 *.m4v
-*.ts
+# Video transport streams (exclude media dirs only to preserve TypeScript source files)
+data/**/*.ts
+evidence_store/**/*.ts
+!*.ts
+!*.tsx
 *.raw
 *.bin
 *.iso
